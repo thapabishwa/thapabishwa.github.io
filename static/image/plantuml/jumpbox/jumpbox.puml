@@ -1,0 +1,96 @@
+@startuml jumpbox
+top to bottom direction
+!define AWSPuml https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v13.1/dist
+!include AWSPuml/AWSCommon.puml
+!include AWSPuml/AWSSimplified.puml
+!include AWSPuml/Compute/EC2AutoScaling.puml
+!include AWSPuml/Compute/EC2Instance.puml
+!include AWSPuml/Groups/AWSCloud.puml
+!include AWSPuml/Groups/AvailabilityZone.puml
+!include AWSPuml/Groups/PublicSubnet.puml
+!include AWSPuml/Groups/PrivateSubnet.puml
+!include AWSPuml/Groups/VPC.puml
+!include AWSPuml/Groups/AutoScalingGroup.puml
+!include AWSPuml/NetworkingContentDelivery/VPCNATGateway.puml
+!include AWSPuml/Database/all.puml
+
+
+actor "Ops/\nAdministrators" as ops
+
+skinparam rectangle<<hidden>> {
+  shadowing false
+  BackgroundColor transparent
+  BorderColor transparent
+}
+
+!unquoted procedure LayoutRectangle($p_alias)
+rectangle " " as $p_alias <<hidden>>
+!endprocedure
+
+AWSCloudGroup(cloud) {
+  VPCGroup(vpc) {
+    AvailabilityZoneGroup(az_2, "  Availability Zone 2") {
+      VPCNATGateway(az_2_nat_gateway, "NAT gateway", "")
+      PublicSubnetGroup(az_2_public, "Public subnet") {
+        EC2Instance(az_2_ec2_1, "jumpbox Instance", "")
+      }
+      PrivateSubnetGroup(az_2_private, "Private subnet") {
+        EC2Instance(az_2_ec2_2, "Workload Instance", "")
+      }
+      PrivateSubnetGroup(az_2_rds_private, "RDS subnet") {
+        AuroraAmazonRDSInstance(az_2_rds, "Amazon RDS", "")
+      }
+      
+      az_2_nat_gateway -[hidden]d- az_2_ec2_1
+      az_2_ec2_1 -[hidden]d- az_2_ec2_2
+      az_2_ec2_2 -[hidden]d- az_2_rds
+    }
+
+    LayoutRectangle(layout_rectangle) {
+      EC2AutoScaling(ec2_auto_scaling, "Amazon EC2 Auto Scaling", "")
+      AutoScalingGroupGroup(asg_1)
+      AutoScalingGroupGroup(asg_2)
+
+      ec2_auto_scaling -[hidden]d- asg_1
+      asg_1 -[hidden]d- asg_2
+    }
+
+    AvailabilityZoneGroup(az_1, "  Availability Zone 1") {
+      VPCNATGateway(az_1_nat_gateway, "NAT gateway", "")
+      PublicSubnetGroup(az_1_public, "Public subnet") {
+        EC2Instance(az_1_ec2_1, " jumpbox Instance", "")
+      }
+      PrivateSubnetGroup(az_1_private, "Private subnet") {
+        EC2Instance(az_1_ec2_2, "Workload Instance", "")
+      }
+      PrivateSubnetGroup(az_1_rds_private, "RDS subnet") {
+        AuroraAmazonRDSInstance(az_1_rds, "Amazon RDS", "")
+      }
+
+      az_1_nat_gateway -[hidden]d- az_1_ec2_1
+      az_1_ec2_1 -[hidden]d- az_1_ec2_2
+      az_1_ec2_2 -[hidden]d- az_1_rds
+    }
+
+    ec2_auto_scaling -[hidden]l- az_1_nat_gateway
+    ec2_auto_scaling -[hidden]r- az_2_nat_gateway
+
+    asg_1 -[dashed,#D86613]l- az_1_ec2_1
+    asg_1 -[dashed,#D86613]r- az_2_ec2_1
+
+    asg_2 -[dashed,#D86613]l- az_1_ec2_2
+    asg_2 -[dashed,#D86613]r- az_2_ec2_2
+
+  }
+
+
+  ops -[norank,#006400]-> az_2_ec2_1
+
+  az_2_ec2_1 -[norank,#006400]-> az_2_ec2_2
+  az_2_ec2_1 -[norank,#006400]-> az_1_ec2_2
+  az_2_ec2_1 -[norank,#006400]-> az_2_rds
+  az_2_ec2_1 -[norank,#006400]-> az_1_rds
+
+  
+}
+@enduml
