@@ -5,7 +5,6 @@ tags: ["hugo", "plantuml", "latex"]
 author: "thapabishwa"
 summary: "Exploring rich content capabilites of hugo"
 katex: math
-markup: 'mmark'
 draft: true
 ---
 
